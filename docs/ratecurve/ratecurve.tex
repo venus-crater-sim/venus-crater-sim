@@ -1,0 +1,29 @@
+\documentclass{amsart}
+\usepackage{amsmath,amssymb,amsthm}
+
+\title{Rate curves for geometric series}
+\author{S. Verona Malone}
+
+\begin{document}
+
+\maketitle
+
+Specify a simulation length \(T\) and a target \(N\) of undestroyed craters at simulation end.
+
+Generate \textsc{iid} resurfacing event sizes \(A_{1,\dots,n}\) from some distribution with support \([0, 1]\) such that \(\sum_{i=1}^{n-1} A_i < 1 \leq \sum_{i=1}^n A_i\). Generate \(n\) \textsc{iid} resurfacing event dates \(t_{1,\dots,n}\) from some distribution with support \((0, T)\) such that \(t_1 < t_2 < \cdots < t_n\).
+
+Define \(t_0 = 0\). Define \(t_{n + 1} = T\) and \(A_{n + 1} = 0\), effectively placing a dummy ``resurfacing event'' with zero area at simulation end.
+
+Specify a nonnegative and not identically zero function \(r(t) : \mathbb R \to \mathbb R\) which measures total impact events per unit time.
+
+Given the \(A_i\), \(t_i\), and \(r(t)\), we wish to find the unitless scaling factor \(X\) such that the simulation produces a mean of \(N\) craters at time \(T\).
+
+Define a sequence \(\{Y_i\}_{i=0}^{n + 1}\) by
+
+\begin{align*}
+Y_i = \begin{cases} 0, &i=0, \\ \left[ Y_{i - 1} + \int_{t_{i-1}}^{t_i} r(t) ~\mathrm dt\right] (1 - A_i), &i = 1, \dots, n + 1. \end{cases}
+\end{align*}
+
+\(Y_i\) represents the unscaled mean of undestroyed craters at time \(t_i\). It is apparent that \(X = N / Y_{n + 1}\).
+
+\end{document}
