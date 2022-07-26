@@ -36,12 +36,12 @@ destroyed.
 """
 
 from __future__ import division
+from collections import Counter
 import math
 import random
 
 import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import axes3d
 import numpy as np
 import pandas as pd
 
@@ -53,7 +53,7 @@ num_impacts = 1000
 
 RESURFACING_AREAS = [0.1, 0.05, 0.01, 0.007, 0.001, 0.0001]
 
-SIM_LENGTH = 1000 # yrs
+SIM_LENGTH = 1000  # yrs
 
 
 def total_resurfaced_area(resurfaced_proportion):
@@ -91,6 +91,17 @@ while sum(resurfacing_event_areas) < 1:
 
 resurfacing_event_years = list(sorted(resurfacing_event_years))
 
+
+# Each impact period ends with a resurfacing event
+resurfacing_event_years = [0.] + resurfacing_event_years
+resurfacing_event_areas = [0.] + resurfacing_event_areas
+resurfacing_event_locations = [sample_location()] + resurfacing_event_locations
+
+resurfacing_event_years.append(SIM_LENGTH)
+resurfacing_event_areas.append(0)
+resurfacing_event_locations.append(sample_location())
+
+
 events_df = pd.DataFrame(np.column_stack([resurfacing_event_years, resurfacing_event_areas, resurfacing_event_locations]), columns=["year", "area", "x", "y", "z"])
 events_df["r"] = resurfacing_event_radius(events_df["area"])
 
@@ -100,10 +111,10 @@ events_df["Lat"] = np.degrees(np.arcsin(events_df["z"] / Venus_radius))
 events_df = events_df.astype(float)
 
 
-# Each impact period ends with a resurfacing event
-# Add start and end of simulation
+
 impact_periods = [(resurfacing_event_years[i], resurfacing_event_years[i + 1])
                   for i in range(len(resurfacing_event_years) - 1)]
+
 
 # Rate curves --- add later --- assume crater formation rate is constant for now
 def impact_rate(time):
@@ -137,7 +148,7 @@ radius_craters = 15  # km
 def crater_classify(crater, event):
     # Great circle distance between impact center and event center
     [xi, yi, zi] = crater[1:4]
-    [xj, yj, zj] = [event.x, event.y, event.z]
+    [xj, yj, zj] = event[2:5]
 
     magi = math.sqrt(xi**2 + yi**2 + zi**2)
     magj = math.sqrt(xj**2 + yj**2 + zj**2)
@@ -147,20 +158,29 @@ def crater_classify(crater, event):
 
     distance = Venus_radius * theta
 
+    event_r = event[5]
 
     crater_class = crater[5]
     crater_r = crater[4]
 
-    if crater_class == "destroyed":
-        return "destroyed"
+    max_distance = event_r + crater_r
+    min_distance = event_r - crater_r
 
-    if distance > event.r + crater_r:
-        return "pristine"
+    if crater_class == "pristine":
+        if distance > max_distance:
+            return "pristine"
 
-    if event.r + crater_r >= distance >= event.r - crater_r:
+        if max_distance >= distance >= min_distance:
+            return "modified"
+
+        if min_distance > distance:
+            return "destroyed"
+    elif crater_class == "modified":
+        if min_distance > distance:
+            return "destroyed"
+
         return "modified"
-
-    if distance < event.r - crater_r:
+    elif crater_class == "destroyed":
         return "destroyed"
 
 
@@ -203,7 +223,38 @@ def sim_yearbyyear():
     return craters_df
 
 
-craters_df = sim_yearbyyear()
+def sim_timebins():
+    craters = []
+
+    # For each impact period (t_i, t_{i + 1})
+    # Calculate the integral over period of r(t)
+    # Generate that many craters all at once
+    # Simulate the resurfacing event at t_{i + 1}
+
+    for idx, period in enumerate(impact_periods):
+        (period_start, period_end) = period
+        expected_craters = scaling_factor * definite_integral(impact_rate, period_start, period_end)
+        for _ in range(int(round(expected_craters))):
+            [impact_x, impact_y, impact_z] = sample_location()
+
+            impact_date = random.uniform(period_start, period_end)
+            crater = [impact_date, impact_x, impact_y, impact_z, radius_craters, "pristine"]
+            craters.append(crater)
+
+        resurfacing_event = events_df.iloc[idx].array
+        for crater in craters:
+            crater[5] = crater_classify(crater, resurfacing_event)
+
+    craters_df = pd.DataFrame(craters, columns=["year", "x", "y", "z", "r", "classification"])
+
+    craters_df["Lon"] = np.degrees(np.arctan2(craters_df["y"], craters_df["x"]))
+    craters_df["Lat"] = np.degrees(np.arcsin(craters_df["z"] / Venus_radius))
+
+    return craters_df
+
+
+# craters_df = sim_yearbyyear()
+craters_df = sim_timebins()
 
 prisdf = craters_df[craters_df["classification"] == "pristine"]
 modifydf = craters_df[craters_df["classification"] == "modified"]
@@ -220,7 +271,8 @@ eventLon = events_df["Lon"].to_numpy()
 eventLat = events_df["Lat"].to_numpy()
 eventR = events_df["r"].to_numpy()
 
-print(f"Generated {len(prisdf)} pristine, {len(modifydf)} modified, {len(destroydf)} destroyed craters.")
+counts = Counter(craters_df["classification"])
+print(counts)
 
 
 """PLOTTING/VISUALIZATION"""
@@ -299,6 +351,7 @@ def plot_craters(
     ax.scatter(
         np.radians(destroycraterLon), np.radians(destroycraterLat), color="blue", s=40
     )
+
     ax.scatter(
         np.radians(eventLon), np.radians(eventLat), color="red", s=eventR, alpha=0.5
     )
