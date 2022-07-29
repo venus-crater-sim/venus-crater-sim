@@ -142,6 +142,8 @@ scaling_factor = num_impacts / unscaled_mean
 
 
 ##radius in the paper is 15km, but im working with sphere of radius 1, so 15km/Venus circumference is this
+
+
 radius_craters = 15  # km
 
 
@@ -238,6 +240,10 @@ def sim_timebins():
             [impact_x, impact_y, impact_z] = sample_location()
 
             impact_date = random.uniform(period_start, period_end)
+            # Change radius_craters to a value generated based on the impact date
+            # Possibly sample a normal distribution with mean R_max * (1 - (impact_date / SIM_LENGTH))   or something
+            # Could possibly interpolate between the points (0, R_max) and (SIM_LENGTH, R_min)
+            # Choose standard deviation freely  
             crater = [impact_date, impact_x, impact_y, impact_z, radius_craters, "pristine"]
             craters.append(crater)
 
@@ -320,6 +326,7 @@ plt.scatter(
     transform=ccrs.PlateCarree(),
 )
 
+
 def plot_craters(
     priscraterLon,
     priscraterLat,
@@ -344,6 +351,8 @@ def plot_craters(
     tick_labels = np.remainder(tick_labels + 360 + org, 360)
     fig = plt.figure(figsize=(10, 5))
     ax = fig.add_subplot(111, projection=projection, facecolor="LightCyan")
+
+    """
     ax.scatter(
         np.radians(priscraterLon), np.radians(priscraterLat), color="purple", s=15
     )  # convert degrees to radians
@@ -355,6 +364,8 @@ def plot_craters(
     ax.scatter(
         np.radians(eventLon), np.radians(eventLat), color="red", s=eventR, alpha=0.5
     )
+    """
+
     ax.set_xticklabels(tick_labels)  # we add the scale on the x axis
     ax.set_title(title)
     ax.title.set_fontsize(15)
