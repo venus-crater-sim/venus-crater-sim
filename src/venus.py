@@ -268,10 +268,23 @@ def sim_timebins(resurfacing_events):
             # Possibly sample a normal distribution with mean R_max * (1 - (impact_date / SIM_LENGTH))   or something
             # Could possibly interpolate between the points (0, R_max) and (SIM_LENGTH, R_min)
             # Choose standard deviation freely
+
+            # linearly interpolate between radius(0) = R_max and radius(SIM_LENGTH) = R_min
+            R_max = 500 # km
+            R_min = 30  # km
+
+            impact_date = random.uniform(period_start, period_end)
+            percent_elapsed = impact_date / SIM_LENGTH
+            mean_radius = (1 - percent_elapsed) * R_max + percent_elapsed * R_min
+            radius = random.normalvariate(mean_radius, 5)
+
+            if radius < 0:
+                radius *= -1
+
             crater = Crater(
-                year=random.uniform(period_start, period_end),
+                year=impact_date,
                 loc=sample_location(),
-                radius=random.normalvariate(50, 10),
+                radius=radius,
                 classification="pristine",
             )
             craters.append(crater)
