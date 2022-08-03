@@ -1,0 +1,31 @@
+\documentclass{amsart}
+\usepackage{amsmath,amssymb,amsthm}
+
+\usepackage{fullpage}
+
+\title{Plotting circles under Mollweide projection}
+\author{S. Verona Malone}
+
+\begin{document}
+
+\maketitle
+
+Consider an origin-centered sphere of radius \(\rho\). Place a circle (representing an impact crater) with radius \(r\) and center \((\rho, \theta, \phi)\), where \(\theta, \phi\) are the usual azimuthal and polar angles in radians, with \(0 \leq \theta < 2\pi\) and \(0 \leq \phi \leq \pi\).
+
+The angle subtended by a radius of the crater is given in radians by \(\alpha = r/\rho\). We assume that \(\alpha < \pi/2\).
+
+Consider a rotation of the sphere that sends the north pole to the center of the crater. Evidently this rotation sends the circle given by \(\phi = \alpha\) (equivalently the line of latitude \(\delta = \pi/2 - \alpha\)) to the rim of the crater.
+
+This rotation is given by the composition of a rotation of angle \(\phi\) about the \(x\)-axis and a rotation of angle \(\theta\) around the \(z\)-axis. Using rotation matrices,
+\begin{align*}
+  R(\theta, \phi) = R_z(\theta)R_x(\phi) &= \begin{bmatrix}\cos \theta & -\sin \theta & 0 \\ \sin \theta & \cos \theta & 0 \\ 0 & 0 & 1 \end{bmatrix}\begin{bmatrix}1 & 0 & 0 \\ 0 & \cos \phi & -\sin \phi \\ 0 & \sin \phi & \cos \phi\end{bmatrix} \\
+    &= \begin{bmatrix}\cos \theta & -\sin \theta \cos \phi & \sin \theta \sin \phi \\ \sin \theta & \cos \theta \cos \phi & -\cos \theta \sin \phi \\ 0 & \sin \phi & \cos \phi\end{bmatrix}.
+\end{align*}
+
+The image of a point \(\mathbf P = (\rho, \lambda, \alpha)\) on the rim of the crater is then
+\begin{align*}
+  R(\theta, \phi)\mathbf P &= \begin{bmatrix}\cos \theta & -\sin\theta \cos\phi & \sin\theta\sin\phi \\ \sin \theta & \cos\theta\cos\phi & -\cos\theta\sin\phi \\ 0 & \sin\phi & \cos\phi\end{bmatrix} \begin{bmatrix}\rho \cos \lambda \sin \alpha \\ \rho \sin \lambda \sin \alpha \\ \rho \cos \alpha\end{bmatrix}.
+\end{align*}
+
+
+\end{document}
