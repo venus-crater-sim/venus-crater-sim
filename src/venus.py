@@ -328,8 +328,18 @@ def plot_craters(
                          for contour in pristine_contours
                          for arc in split_contour(contour)]
 
+    
+    def alpha(crater, max_alpha=1, min_alpha=0.5):
+        impact_date = crater.year
+        percent_elapsed = impact_date / SIM_LENGTH
+        return (1 - percent_elapsed) * min_alpha + percent_elapsed * max_alpha
+
+
     pristine_collection = collections.PolyCollection(pristine_contours)
-    pristine_collection.set_color("purple")
+
+    pristine_colors = [(1, 0, 1, alpha(crater)) for crater in pristine.itertuples()]
+    pristine_collection.set_color(pristine_colors)
+
     ax.add_collection(pristine_collection)
 
     modified_contours = [crater_contour(modified, num_points=100)
@@ -340,18 +350,20 @@ def plot_craters(
                          for arc in split_contour(contour)]
 
     modified_collection = collections.PolyCollection(modified_contours)
-    modified_collection.set_color("green")
+    modified_colors = [(0, 1, 0, alpha(crater)) for crater in modified.itertuples()]
+    modified_collection.set_color(modified_colors)
     ax.add_collection(modified_collection)
 
     destroyed_contours = [crater_contour(destroyed, num_points=100)
-                         for destroyed in destroyed.itertuples()]
+                          for destroyed in destroyed.itertuples()]
 
     destroyed_contours = [arc
-                         for contour in destroyed_contours
-                         for arc in split_contour(contour)]
+                          for contour in destroyed_contours
+                          for arc in split_contour(contour)]
 
     destroyed_collection = collections.PolyCollection(destroyed_contours)
-    destroyed_collection.set_color("blue")
+    destroyed_colors = [(0, 0, 1, alpha(crater)) for crater in destroyed.itertuples()]
+    destroyed_collection.set_color(destroyed_colors)
     ax.add_collection(destroyed_collection)
 
     event_contours = [crater_contour(event, num_points=100)
