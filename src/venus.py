@@ -149,9 +149,13 @@ def crater_classify(crater, event):
     return "destroyed"
 
 
-def crater_contour(crater, num_points=20):
+def crater_contour(crater, num_points=20, debug=False):
     [x, y, z] = crater.loc
     r = crater.radius
+
+    if debug:
+        print(f"Event center: {[x, y, z]}")
+        print(f"Event radius: {r}")
 
     alpha = r / VENUS_RADIUS
 
@@ -179,23 +183,30 @@ def crater_contour(crater, num_points=20):
     rim_lon = np.arctan2(rim_rect[:, 1], rim_rect[:, 0])
     rim_lat = np.arcsin(rim_rect[:, 2] / VENUS_RADIUS)
 
+    if debug:
+        print(np.column_stack([rim_lon, rim_lat]))
+
+        print()
+
     return np.column_stack([rim_lon, rim_lat])
 
 
 def split_contour(contour):
     arcs = [np.array(list(group)) for key, group in groupby(contour, lambda coord: coord[0] >= 0)]
 
-
-    if len(arcs) < 3:
+    if len(arcs) == 1:
         return [contour]
 
     if abs(arcs[0][-1][0]) < 1:
         return [contour]
 
+    return arcs
 
+"""
     split = [np.row_stack([arcs[2], arcs[0]]), arcs[1]]
     print(split)
     return split
+"""
 
 
 
@@ -320,7 +331,7 @@ def plot_craters(
     pristine = craters_df[craters_df["classification"] == "pristine"]
     modified = craters_df[craters_df["classification"] == "modified"]
     destroyed = craters_df[craters_df["classification"] == "destroyed"]
-
+    """
     pristine_contours = [crater_contour(pristine, num_points=100)
                          for pristine in pristine.itertuples()]
 
@@ -365,47 +376,19 @@ def plot_craters(
     destroyed_colors = [(0, 0, 1, alpha(crater)) for crater in destroyed.itertuples()]
     destroyed_collection.set_color(destroyed_colors)
     ax.add_collection(destroyed_collection)
+    """
 
-    event_contours = [crater_contour(event, num_points=100)
-                      for event in events_df.itertuples()]
+    event_contours = [crater_contour(event, num_points=100, debug=True)
+                      for event in list(events_df.itertuples())[:6]]
 
     event_contours = [arc
                       for contour in event_contours
                       for arc in split_contour(contour)]
 
-    event_collection = collections.PolyCollection(event_contours)
+    event_collection = collections.LineCollection(event_contours)
     event_collection.set_color("red")
-    event_collection.set_alpha(0.25)
+    # event_collection.set_alpha(0.25)
     ax.add_collection(event_collection)
-
-    """
-    ax.scatter(
-        np.radians(pristine["lon"]),
-        np.radians(pristine["lat"]),
-        color="purple",
-        s=15,
-    )
-    ax.scatter(
-        np.radians(modified["lon"]),
-        np.radians(modified["lat"]),
-        color="green",
-        s=50,
-    )
-    ax.scatter(
-        np.radians(destroyed["lon"]),
-        np.radians(destroyed["lat"]),
-        color="blue",
-        s=40,
-    )
-
-    ax.scatter(
-        np.radians(events_df["lon"]),
-        np.radians(events_df["lat"]),
-        color="red",
-        s=events_df["radius"],
-        alpha=0.5,
-    )
-    """
 
     ax.set_xticklabels(tick_labels)  # we add the scale on the x axis
     ax.set_title(title)
