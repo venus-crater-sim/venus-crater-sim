@@ -46,6 +46,7 @@ import cartopy.crs as ccrs
 from matplotlib import collections
 import matplotlib.pyplot as plt
 import numpy as np
+from scipy.optimize import brentq as find_root
 import pandas as pd
 
 
@@ -175,6 +176,40 @@ def crater_contour(crater, num_points=20, debug=False):
     sp = math.sin(phi)
     cp = math.cos(phi)
 
+    # Using pole/bisect conditions, find the longitude/s that are preimages of the intersection points.
+    # This will work by the bisection method and segmenting the function of \theta into monotonic parts.
+
+    # Minima and maxima of f(theta) occur when f'(theta) = 0
+    # f(theta) = A cos theta + B sin theta
+    A = st * math.sin(alpha)
+    B = ct * cp * math.sin(alpha)
+    C = ct * sp * math.cos(alpha)
+
+    def f(theta):
+        return A * math.cos(theta) + B * math.sin(theta) - C
+
+    crit1 = np.arctan2(B, A)
+    crit2 = (np.arctan2(B, A) + np.pi) % (2 * np.pi)
+
+    smaller_crit = min(crit1, crit2)
+    larger_crit = max(crit1, crit2)
+
+    intervals = [[-np.pi, smaller_crit], [smaller_crit, larger_crit], [larger_crit, np.pi]]
+    zeros = []
+    for [a, b] in intervals:
+        try:
+            zeros.append(find_root(f, a, b))
+        except ValueError:
+            pass
+
+    print(f"Critical points are {smaller_crit}, {larger_crit}")
+    print(f"Zeros are at {zeros}")
+
+    # For each longitude theta, add theta + eps and theta - eps to the list in order.
+    # (eps is like 10**-6)
+    # Then split into contiguous positive/negative longitude arcs using restrict_contour.
+    # In the polar case, add the pole to the end.
+
     rotation_matrix = np.array([[ct, -st * cp, st * sp],
                                 [st, ct * cp,  -ct * sp],
                                 [0,  sp,       cp]])
@@ -189,6 +224,67 @@ def crater_contour(crater, num_points=20, debug=False):
         print()
 
     return np.column_stack([rim_lon, rim_lat])
+
+
+def restrict_crater(crater):
+    angle_subtended = alpha = crater.radius / VENUS_RADIUS
+    longitude = theta = np.radians(crater.lon)
+    latitude = np.radians(crater.lat)
+    colatitude = phi = math.pi / 2 - latitude
+    
+    over_north_pole = phi - alpha < 0
+    over_south_pole = phi + alpha > np.pi
+
+    bisected_left_of_center = theta - alpha < -1 * np.pi
+    bisected_right_of_center = theta + alpha > np.pi
+
+    if over_north_pole or over_south_pole:
+        # Find the intersection point between the crater and line of 180 longitude.
+        intersection_point = []
+
+        
+    elif bisected_left_of_center and bisected_right_of_center:
+        # Find the two intersection points, as above.
+        pass
+
+
+def restrict_contour(contour):
+    """Restricts the `contour` line given to the continuous area of the Mollweide projection."""
+
+    # Split contour into contiguous segments lying in either the west or east hemisphere.
+    # That is, positive/negative longitude.
+    arcs = [list(group) for key, group in groupby(contour, lambda coord: coord[0] >= 0)]
+
+
+    new_arcs = []
+    # A contour that crosses the line of 180 longitude will go from -pi to +pi
+    # or vice versa.
+    # Hence, the last element before such a cross is made will have an absolute value of about pi.
+
+    for idx in range(len(arcs)):
+        this_arc = arcs[idx]
+        next_arc = arcs[(idx + 1) % len(arcs)]
+
+        # Want the last point of this arc and the first point of the next arc
+        last_lon = this_arc[-1][0]
+        first_lon = next_arc[0][0]
+
+        # Did the contour change sign (cross 0 or 180 longitude) here?
+        changed_sign = np.sign(last_lon) != np.sign(first_lon)
+        # If it did, did the contour cross 180 longitude?
+        crossed_180 = changed_sign and np.abs(first_lon) > 1 and np.abs(last_lon) > 1
+
+        if changed_sign and crossed_180:
+            new_arcs.append(next_arc)
+        elif len(new_arcs) == 0:
+            new_arcs.append(next_arc)
+        else:
+            new_arcs[-1].extend(next_arc)
+
+    for idx, arc in enumerate(new_arcs):
+        print(f"Arc {idx}:")
+        print(np.array(arc))
+    return new_arcs
 
 
 def split_contour(contour):

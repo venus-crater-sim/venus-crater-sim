@@ -1,4 +1,4 @@
-from venus import VENUS_RADIUS
+from venus import VENUS_RADIUS, restrict_contour
 
 import math
 
@@ -51,5 +51,6 @@ def crater_contour(x, y, z, r, num_points=20, debug=False):
     return np.column_stack([rim_lon, rim_lat])
 
 
-# crater_contour(255, 926, 5975, 3827, debug=True)
-crater_contour(206, -25, 6048, 1012, debug=True)
+contour = crater_contour(255, 926, 5975, 3827, debug=True)
+# contour = crater_contour(206, -25, 6048, 1012)
+restrict_contour(contour)
